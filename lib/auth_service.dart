@@ -13,6 +13,16 @@ class AuthService {
     return await _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
+    Future<User?> createUserWithEmailAndPassword(String email, String password) async {
+    try {
+      UserCredential result = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+      User? user = result.user;
+      return user;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Sign out the current user
   Future<void> signOut() async {
     await _auth.signOut();

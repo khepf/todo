@@ -143,9 +143,24 @@ class _StartPageState extends State<StartPage> {
             SizedBox(
               width: 200, // Same width for consistency
               child: ElevatedButton(
-                onPressed: () {
-                  // Add register functionality
-                },
+                  onPressed: () async {
+                    String? email = await _getEmailFromUser();  // Reuse the existing method to get email
+                    String? password = await _getPasswordFromUser();  // Reuse the existing method to get password
+
+                    if (email != null && password != null) {
+                      try {
+                        await _authService.createUserWithEmailAndPassword(email, password);
+                        Navigator.of(context).pushReplacementNamed('/todoList');  // Navigate to Todo list on successful registration
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Registration failed: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          )
+                        );
+                      }
+                    }
+                  },
                 child: const Text('Register'),
               ),
             ),
