@@ -1,11 +1,40 @@
 // ignore_for_file: library_private_types_in_public_api
-
+import 'auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-void main() => runApp(const TodoApp());
+
+
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+    // Listen for authentication state changes
+  FirebaseAuth.instance.authStateChanges().listen((User? user) {
+    if (user == null) {
+      // User is signed out
+      print('User is signed out');
+    } else {
+      // User is signed in
+      print('User is signed in');
+    }
+  });
+
+  runApp(const TodoApp());
+}
+
+enum TaskPriority { high, medium, low }
+
 
 class TodoApp extends StatelessWidget {
   const TodoApp({super.key});
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -19,8 +48,61 @@ class TodoApp extends StatelessWidget {
   }
 }
 
-class StartPage extends StatelessWidget {
+class StartPage extends StatefulWidget {
   const StartPage({super.key});
+
+  @override
+  _StartPageState createState() => _StartPageState();
+
+}
+
+class _StartPageState extends State<StartPage> {
+  final AuthService _authService = AuthService();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+   Future<String?> _getEmailFromUser() {
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Enter Email'),
+          content: TextField(
+            controller: _emailController,
+            decoration: const InputDecoration(hintText: 'Email'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(_emailController.text),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+   Future<String?> _getPasswordFromUser() {
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Enter Password'),
+          content: TextField(
+            controller: _passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(hintText: 'Password'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(_passwordController.text),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,8 +115,26 @@ class StartPage extends StatelessWidget {
             SizedBox(
               width: 200, // Define the width here
               child: ElevatedButton(
-                onPressed: () {
-                  // Add login functionality
+                onPressed: () async {
+                // Show a dialog or navigate to a new screen to get email and password
+                  String? email = await _getEmailFromUser();
+                  String? password = await _getPasswordFromUser();
+
+                  if (email != null && password != null) {
+                    try {
+                      await _authService.signInWithEmailAndPassword(email, password);
+                      Navigator.of(context).pushReplacementNamed('/todoList');
+                      // Handle successful login
+                    } catch (e) {
+                      // Handle login error
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Login failed: ${e.toString()}'),
+                            backgroundColor: Colors.red,
+                          )
+                        );
+                    }
+                  }
                 },
                 child: const Text('Login'),
               ),
@@ -69,12 +169,24 @@ class StartPage extends StatelessWidget {
                 child: const Text('Contact Us'),
               ),
             ),
+            SizedBox(
+              width: 200, // Same width for consistency
+              child: ElevatedButton(
+                onPressed: () async {
+                  await _authService.signOut();
+                  // Handle sign-out
+                },
+                child: const Text('Sign Out'),
+              ),
+            )
           ],
         ),
       ),
     );
   }
+
 }
+
 
 class TodoList extends StatefulWidget {
   const TodoList({super.key});
@@ -83,7 +195,6 @@ class TodoList extends StatefulWidget {
   _TodoListState createState() => _TodoListState();
 }
 
-enum TaskPriority { high, medium, low }
 
 class TodoItem {
   String title;
@@ -96,6 +207,7 @@ class TodoItem {
 
 class _TodoListState extends State<TodoList> {
   final List<TodoItem> _todoItems = [];
+  final AuthService _authService = AuthService();
   TaskPriority selectedPriority = TaskPriority.low;
   TaskPriority? _currentTaskPriority;
 
@@ -263,10 +375,6 @@ void _pushAddEditTodoScreen({String? initialTask, int? index, TaskPriority? init
   );
 }
 
-
-
-
-
 void _removeTodoItem(int index) {
   setState(() {
     _todoItems.removeAt(index);
@@ -274,17 +382,34 @@ void _removeTodoItem(int index) {
 }
 
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('To Do List')),
-      body: _buildTodoList(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _pushAddEditTodoScreen(),
-        tooltip: 'Add task',
-        child: const Icon(Icons.add),
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(title: const Text('To Do List')),
+    body: _buildTodoList(),
+    floatingActionButton: FloatingActionButton(
+      onPressed: () => _pushAddEditTodoScreen(),
+      tooltip: 'Add task',
+      child: const Icon(Icons.add),
+    ),
+    floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+    bottomNavigationBar: BottomAppBar(
+      shape: CircularNotchedRectangle(),
+      notchMargin: 6.0,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: <Widget>[
+          IconButton(
+            icon: Icon(Icons.exit_to_app),
+            onPressed: () async {
+              await _authService.signOut();
+              Navigator.of(context).pushReplacementNamed('/');
+            },
+          ),
+        ],
       ),
+    ),
+  );
+}
 
-    );
-  }
 }
