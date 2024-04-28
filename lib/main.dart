@@ -196,15 +196,6 @@ class TodoList extends StatefulWidget {
 }
 
 
-class TodoItem {
-  String title;
-  bool completed;
-  TaskPriority priority;
-
-  TodoItem({required this.title, this.completed = false, this.priority = TaskPriority.low});
-}
-
-
 class _TodoListState extends State<TodoList> {
   final List<TodoItem> _todoItems = [];
   final AuthService _authService = AuthService();
@@ -412,4 +403,13 @@ Widget build(BuildContext context) {
   );
 }
 
+}
+
+
+class TodoItem {
+  String title;
+  bool completed;
+  TaskPriority priority;
+
+  TodoItem({required this.title, this.completed = false, this.priority = TaskPriority.low});
 }
